@@ -711,11 +711,11 @@ static int            hdrs             =    0  ;   // size of header
 // separate info for each color component
 static componentInfo cmpnfo[ 4 ];
 
-constexpr int QUANT(int cm, int bp) {
+int QUANT(int cm, int bp) {
 	return cmpnfo[cm].qtable[bp];
 }
 
-constexpr int MAX_V(int cm, int bp) {
+int MAX_V(int cm, int bp) {
 	return (QUANT(cm, bp) > 0) ? (freqmax[bp] + QUANT(cm, bp) - 1) / QUANT(cm, bp) : 0;
 }
 namespace image {
@@ -1787,7 +1787,7 @@ static void execute( bool (*function)() )
 		// write statusmessage
 		if ( verbosity == 2 ) {
 			fprintf( msgout,  "\n%s ", get_status( function ).c_str() );
-			for ( int i = strlen( get_status( function ).c_str()); i <= 30; i++ )
+			for ( int i = get_status( function ).length(); i <= 30; i++ )
 				fprintf( msgout,  " " );			
 		}
 		
@@ -3114,7 +3114,7 @@ static bool unpredict_dc()
 	return true;
 }
 
-static bool jpg::decode::check_value_range()
+bool jpg::decode::check_value_range()
 {
 	int absmax;
 	int cmp, bpos, dpos;
@@ -3152,7 +3152,7 @@ static bool calc_zdst_lists()
 	for ( cmp = 0; cmp < image::cmpc; cmp++ )
 	{
 		// preset zdstlist
-		memset( pjg::zdstdata[cmp], 0, cmpnfo[cmp].bc * sizeof( char ) );
+		std::fill_n(pjg::zdstdata[cmp], cmpnfo[cmp].bc, static_cast<unsigned char>(0));
 		
 		// calculate # on non-zeroes per block (separately for lower 7x7 block & first row/collumn)
 		for ( bpos = 1; bpos < 64; bpos++ ) {
@@ -5477,7 +5477,7 @@ bool pjg::decode::generic( const std::unique_ptr<aricoder>& dec, unsigned char**
 	return true;
 }
 
-static std::vector<std::uint8_t> pjg::decode::generic(const std::unique_ptr<aricoder>& dec) {
+std::vector<std::uint8_t> pjg::decode::generic(const std::unique_ptr<aricoder>& dec) {
 	auto bwrt = std::make_unique<abytewriter>(1024);
 	auto model = INIT_MODEL_S(256 + 1, 256, 1);
 	while (true) {
