@@ -762,7 +762,7 @@ static iostream* str_out = nullptr;	// output stream
 static iostream* str_str = nullptr;	// storage stream
 
 static std::vector<std::string> filelist; // list of files to process 
-static int    file_no  = 0;			// number of current file
+static std::size_t file_no = 0; // number of current file
 
 static std::vector<std::string> err_list; // list of error messages 
 static std::vector<int> err_tp; // list of error types
@@ -939,7 +939,7 @@ int main( int argc, char** argv )
 	// show statistics
 	fprintf( msgout,  "\n\n-> %i file(s) processed, %i error(s), %i warning(s)\n",
 		filelist.size(), error_cnt, warn_cnt );
-	if ( (filelist.size() > error_cnt ) && ( verbosity != 0 ) &&
+	if ( (static_cast<int>(filelist.size()) > error_cnt ) && ( verbosity != 0 ) &&
 	 ( action == Action::A_COMPRESS ) ) {
 		acc_jpgsize /= 1024.0;
 		acc_pjgsize /= 1024.0;
@@ -1373,7 +1373,7 @@ static void process_ui()
 
 	std::string actionmsg;
 	if ( verbosity >= 0 ) { // standard UI
-		fprintf( msgout,  "\nProcessing file %i of %u \"%s\" -> ",
+		fprintf( msgout,  "\nProcessing file %u of %u \"%s\" -> ",
 					file_no + 1, filelist.size(), filelist[ file_no ].c_str() );
 		
 		if ( verbosity > 1 )
@@ -1399,8 +1399,8 @@ static void process_ui()
 	}
 	else { // progress bar UI
 		// update progress message
-		fprintf( msgout, "Processing file %2i of %2u ", file_no + 1, filelist.size());
-		progress_bar( file_no, filelist.size());
+		fprintf( msgout, "Processing file %2u of %2u ", file_no + 1, filelist.size());
+		progress_bar( static_cast<int>(file_no), filelist.size());
 		fprintf( msgout, "\r" );
 		execute( check_file );
 	}
@@ -1490,7 +1490,7 @@ static void process_ui()
 		// if this is the last file, update progress bar one last time
 		if ( file_no + 1 == filelist.size()) {
 			// update progress message
-			fprintf( msgout, "Processed %2i of %2u files ", file_no + 1, filelist.size());
+			fprintf( msgout, "Processed %2u of %2u files ", file_no + 1, filelist.size());
 			progress_bar( 1, 1 );
 			fprintf( msgout, "\r" );
 		}	
