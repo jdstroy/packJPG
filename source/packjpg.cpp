@@ -327,7 +327,7 @@ constexpr int e_devli(int s, int n) {
 }
 
 constexpr int pack(std::uint8_t left, std::uint8_t right) {
-	return (int(left) << 8) + int(right);
+	return (static_cast<int>(left) << 8) + static_cast<int>(right);
 }
 
 constexpr int bitlen1024p(int v) {
@@ -389,14 +389,14 @@ struct componentInfo {
 };
 
 struct HuffCodes {
-	std::array<std::uint16_t, 256> cval = { 0 };
-	std::array<std::uint16_t, 256> clen = { 0 };
+	std::array<std::uint16_t, 256> cval = std::array<std::uint16_t, 256>{ 0 };
+	std::array<std::uint16_t, 256> clen = std::array<std::uint16_t, 256>{ 0 };
 	std::uint16_t max_eobrun = 0;
 };
 
 struct HuffTree {
-	std::array<std::uint16_t, 256> l = { 0 };
-	std::array<std::uint16_t, 256> r = { 0 };
+	std::array<std::uint16_t, 256> l = std::array<std::uint16_t, 256>{ 0 };
+	std::array<std::uint16_t, 256> r = std::array<std::uint16_t, 256>{ 0 };
 };
 
 enum JpegType {
@@ -4409,7 +4409,7 @@ jpg::CodingStatus jpg::decode::skip_eobrun(int cmpt, int* dpos, int* rstw, int* 
 	return jpg::CodingStatus::OKAY;
 }
 
-static HuffCodes jpg::jfif::build_huffcodes(const unsigned char* clen, const unsigned char* cval) {
+HuffCodes jpg::jfif::build_huffcodes(const unsigned char* clen, const unsigned char* cval) {
 	HuffCodes codes;
 	int k = 0;
 	int code = 0;
@@ -4436,7 +4436,7 @@ static HuffCodes jpg::jfif::build_huffcodes(const unsigned char* clen, const uns
 	return codes;
 }
 
-static HuffTree jpg::jfif::build_hufftree(const HuffCodes& hc) {
+HuffTree jpg::jfif::build_hufftree(const HuffCodes& hc) {
 	HuffTree tree;
 	// initial value for next free place
 	int nextfree = 1;
@@ -4610,8 +4610,8 @@ void pjg::encode::dc(const std::unique_ptr<aricoder>& enc, int cmp)
 	const int max_len = bitlen1024p( max_val ); // Max bitlength.
 	
 	// init models for bitlenghts and -patterns	
-	auto mod_len = INIT_MODEL_S(max_len + 1, std::max(int(segm_cnt[cmp]), max_len + 1), 2);
-	auto mod_res = INIT_MODEL_B(std::max(int(segm_cnt[cmp]), 16), 2);
+	auto mod_len = INIT_MODEL_S(max_len + 1, std::max(static_cast<int>(segm_cnt[cmp]), max_len + 1), 2);
+	auto mod_res = INIT_MODEL_B(std::max(static_cast<int>(segm_cnt[cmp]), 16), 2);
 	auto mod_sgn = INIT_MODEL_B(1, 0);
 	
 	// set width/height of each band
@@ -4691,8 +4691,8 @@ void pjg::encode::ac_high(const std::unique_ptr<aricoder>& enc, int cmp)
 	const unsigned char* segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = INIT_MODEL_S(11, std::max(11, int(segm_cnt[cmp])), 2);
-	auto mod_res = INIT_MODEL_B(std::max(int(segm_cnt[cmp]), 16), 2);
+	auto mod_len = INIT_MODEL_S(11, std::max(11, static_cast<int>(segm_cnt[cmp])), 2);
+	auto mod_res = INIT_MODEL_B(std::max(static_cast<int>(segm_cnt[cmp]), 16), 2);
 	auto mod_sgn = INIT_MODEL_B(9, 1);
 	
 	// set width/height of each band
@@ -4700,9 +4700,9 @@ void pjg::encode::ac_high(const std::unique_ptr<aricoder>& enc, int cmp)
 	const int w = cmpnfo[cmp].bch;
 	
 	// allocate memory for absolute values & signs storage
-	std::vector<unsigned short> absv_store(bc);	// absolute coefficients values storage
-	std::vector<unsigned char> sgn_store(bc); // sign storage for context	
-	std::vector<unsigned char> zdstls(pjg::zdstdata[cmp], pjg::zdstdata[cmp] + bc); // copy of zero distribution list
+	std::vector<std::uint16_t> absv_store(bc);	// absolute coefficients values storage
+	std::vector<std::uint8_t> sgn_store(bc); // sign storage for context	
+	std::vector<std::uint8_t> zdstls(pjg::zdstdata[cmp], pjg::zdstdata[cmp] + bc); // copy of zero distribution list
 	
 	// set up quick access arrays for signs context
 	unsigned char* sgn_nbh = sgn_store.data() - 1; // Left signs neighbor.
@@ -4713,8 +4713,8 @@ void pjg::encode::ac_high(const std::unique_ptr<aricoder>& enc, int cmp)
 	unsigned char* eob_y = pjg::eobyhigh[ cmp ]; // Pointer to y eobs.
 	
 	// preset x/y eobs
-	std::fill(eob_x, eob_x + bc, unsigned char(0));
-	std::fill(eob_y, eob_y + bc, unsigned char(0));
+	std::fill(eob_x, eob_x + bc, static_cast<unsigned char>(0));
+	std::fill(eob_y, eob_y + bc, static_cast<unsigned char>(0));
 	
 	// work through lower 7x7 bands in order of pjg::freqscan
 	for (int i = 1; i < 64; i++ )
@@ -4728,8 +4728,8 @@ void pjg::encode::ac_high(const std::unique_ptr<aricoder>& enc, int cmp)
 			continue; // process remaining coefficients elsewhere
 	
 		// preset absolute values/sign storage
-		std::fill(std::begin(absv_store), std::end(absv_store), unsigned short(0));
-		std::fill(std::begin(sgn_store), std::end(sgn_store), unsigned char(0));
+		std::fill(std::begin(absv_store), std::end(absv_store), static_cast<std::uint16_t>(0));
+		std::fill(std::begin(sgn_store), std::end(sgn_store), static_cast<std::uint8_t>(0));
 		
 		// set up average context quick access arrays
 		pjg::aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
@@ -4820,9 +4820,9 @@ void pjg::encode::ac_low(const std::unique_ptr<aricoder>& enc, int cmp)
 	int pred_cf[ 8 ]; // prediction multipliers
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = INIT_MODEL_S(11, std::max(int(segm_cnt[cmp]), 11), 2);
+	auto mod_len = INIT_MODEL_S(11, std::max(static_cast<int>(segm_cnt[cmp]), 11), 2);
 	auto mod_res = INIT_MODEL_B(1 << 4, 2);
-	auto mod_top = INIT_MODEL_B(1 << std::max(4, int(nois_trs[cmp])), 3);
+	auto mod_top = INIT_MODEL_B(1 << std::max(4, static_cast<int>(nois_trs[cmp])), 3);
 	auto mod_sgn = INIT_MODEL_B(11, 1);
 	
 	// set width/height of each band
@@ -5113,8 +5113,8 @@ void pjg::decode::dc(const std::unique_ptr<aricoder>& dec, int cmp)
 	const int max_len = bitlen1024p( max_val ); // Max bitlength.
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = INIT_MODEL_S(max_len + 1, std::max(int(segm_cnt[cmp]), max_len + 1), 2);
-	auto mod_res = INIT_MODEL_B(std::max(int(segm_cnt[cmp]), 16), 2);
+	auto mod_len = INIT_MODEL_S(max_len + 1, std::max(static_cast<int>(segm_cnt[cmp]), max_len + 1), 2);
+	auto mod_res = INIT_MODEL_B(std::max(static_cast<int>(segm_cnt[cmp]), 16), 2);
 	auto mod_sgn = INIT_MODEL_B(1, 0);
 	
 	// set width/height of each band
@@ -5194,8 +5194,8 @@ void pjg::decode::ac_high(const std::unique_ptr<aricoder>& dec, int cmp)
 	const unsigned char* segm_tab = segm_tables[ segm_cnt[ cmp ] - 1 ];
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = INIT_MODEL_S(11, std::max(int(segm_cnt[cmp]), 11), 2);
-	auto mod_res = INIT_MODEL_B(std::max(int(segm_cnt[cmp]), 16), 2);
+	auto mod_len = INIT_MODEL_S(11, std::max(static_cast<int>(segm_cnt[cmp]), 11), 2);
+	auto mod_res = INIT_MODEL_B(std::max(static_cast<int>(segm_cnt[cmp]), 16), 2);
 	auto mod_sgn = INIT_MODEL_B(9, 1);
 	
 	// set width/height of each band
@@ -5203,9 +5203,9 @@ void pjg::decode::ac_high(const std::unique_ptr<aricoder>& dec, int cmp)
 	const int w = cmpnfo[cmp].bch;
 	
 	// allocate memory for absolute values & signs storage
-	std::vector<unsigned short> absv_store(bc); // absolute coefficients values storage
-	std::vector<unsigned char> sgn_store(bc); // sign storage for context	
-	std::vector<unsigned char> zdstls(pjg::zdstdata[cmp], pjg::zdstdata[cmp] + bc); // copy of zero distribution list
+	std::vector<std::uint16_t> absv_store(bc); // absolute coefficients values storage
+	std::vector<std::uint8_t> sgn_store(bc); // sign storage for context	
+	std::vector<std::uint8_t> zdstls(pjg::zdstdata[cmp], pjg::zdstdata[cmp] + bc); // copy of zero distribution list
 	
 	// set up quick access arrays for signs context
 	unsigned char* sgn_nbh = sgn_store.data() - 1; // Left signs neighbor.
@@ -5216,8 +5216,8 @@ void pjg::decode::ac_high(const std::unique_ptr<aricoder>& dec, int cmp)
 	unsigned char* eob_y = pjg::eobyhigh[ cmp ]; // Pointer to y eobs.
 	
 	// preset x/y eobs
-	std::fill(eob_x, eob_x + bc, unsigned char(0));
-	std::fill(eob_y, eob_y + bc, unsigned char(0));
+	std::fill(eob_x, eob_x + bc, static_cast<unsigned char>(0));
+	std::fill(eob_y, eob_y + bc, static_cast<unsigned char>(0));
 	
 	// work through lower 7x7 bands in order of pjg::freqscan
 	for (int i = 1; i < 64; i++ )
@@ -5231,8 +5231,8 @@ void pjg::decode::ac_high(const std::unique_ptr<aricoder>& dec, int cmp)
 				continue; // process remaining coefficients elsewhere
 		
 		// preset absolute values/sign storage
-		std::fill(std::begin(absv_store), std::end(absv_store), unsigned short(0));
-		std::fill(std::begin(sgn_store), std::end(sgn_store), unsigned char(0));
+		std::fill(std::begin(absv_store), std::end(absv_store), static_cast<std::uint16_t>(0));
+		std::fill(std::begin(sgn_store), std::end(sgn_store), static_cast<std::uint8_t>(0));
 		
 		// set up average context quick access arrays
 		pjg::aavrg_prepare( c_absc, c_weight, absv_store.data(), cmp );
@@ -5322,9 +5322,9 @@ void pjg::decode::ac_low(const std::unique_ptr<aricoder>& dec, int cmp)
 	int pred_cf[ 8 ]; // prediction multipliers
 	
 	// init models for bitlenghts and -patterns
-	auto mod_len = INIT_MODEL_S(11, std::max(int(segm_cnt[cmp]), 11), 2);
+	auto mod_len = INIT_MODEL_S(11, std::max(static_cast<int>(segm_cnt[cmp]), 11), 2);
 	auto mod_res = INIT_MODEL_B(1 << 4, 2);
-	auto mod_top = INIT_MODEL_B(1 << std::max(4, int(nois_trs[cmp])), 3);
+	auto mod_top = INIT_MODEL_B(1 << std::max(4, static_cast<int>(nois_trs[cmp])), 3);
 	auto mod_sgn = INIT_MODEL_B(11, 1);
 	
 	// set width/height of each band
@@ -5591,7 +5591,7 @@ void pjg::encode::optimize_dht(int hpos, int segment_length) {
 
 		int skip = 16; // Num bytes to skip.
 		for (int i = 0; i < 16; i++) {
-			skip += int(hdrdata[hpos + i]);
+			skip += static_cast<int>(hdrdata[hpos + i]);
 		}
 		hpos += skip;
 	}
@@ -5652,7 +5652,7 @@ void pjg::decode::deoptimize_dht(int hpos, int segment_length) {
 
 		int skip = 16; // Num bytes to skip.
 		for (int i = 0; i < 16; i++) {
-			skip += int(hdrdata[hpos + i]);
+			skip += static_cast<int>(hdrdata[hpos + i]);
 		}
 		hpos += skip;
 	}
@@ -5976,7 +5976,7 @@ int predictor::dc_1ddct_predictor(int cmp, int dpos) {
 
 	// Store current block DC coefficient:
 	const short swap = dct::colldata[cmp][0][dpos];
-	dct::colldata[cmp][0][dpos] = short(0);
+	dct::colldata[cmp][0][dpos] = static_cast<short>(0);
 
 	// Calculate prediction:
 	int pred = 0;
