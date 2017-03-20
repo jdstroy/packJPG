@@ -5530,7 +5530,7 @@ void pjg::encode::get_zerosort_scan(unsigned char* sv, int cmpt)  {
 	               });
 
 	// Sort in ascending order according to the number of zeroes per band:
-	std::sort(std::begin(index) + 1, // Skip the first element.
+	std::stable_sort(std::begin(index) + 1, // Skip the first element.
 	          std::end(index),
 	          [&](const uint32_t& a, const uint32_t& b) {
 		          return zeroDist[a] < zeroDist[b];
