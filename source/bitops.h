@@ -186,6 +186,7 @@ public:
 	virtual bool read_byte(unsigned char* to) = 0;
 	virtual int write(const unsigned char* from, int dtsize) = 0;
 	virtual int write_byte(unsigned char byte) = 0;
+	virtual bool write_word(uint32_t word) = 0;
 	virtual int rewind() = 0;
 	virtual int getpos() = 0;
 	virtual int getsize() = 0;
@@ -206,6 +207,7 @@ public:
 	bool read_byte(unsigned char* to) override;
 	int write(const unsigned char* from, int dtsize) override;
 	int write_byte(unsigned char byte) override;
+	bool write_word(uint32_t word) override;
 	int rewind() override;
 	int getpos() override;
 	int getsize() override;
@@ -231,6 +233,7 @@ public:
 	bool read_byte(unsigned char* to) override;
 	int write(const unsigned char* from, int dtsize) override;
 	int write_byte(unsigned char byte) override;
+	bool write_word(uint32_t word) override;
 	int rewind() override;
 	int getpos() override;
 	int getsize() override;

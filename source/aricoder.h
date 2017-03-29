@@ -332,17 +332,19 @@ private:
 	// Encodes the sybol.
 	void encode(const Symbol* s);
 
-	template<uint8_t bit>
+	template<uint32_t bit>
 	void write_bit() {
 		// add bit at last position
-		bbyte = (bbyte << 1) | bit;
+		word <<= 1;
+		word |= bit;
 		// increment bit position
 		cbit++;
 
 		// write bit if done
-		if (cbit == 8) {
-			sptr->write_byte(bbyte);
+		if (cbit == 32) {
+			sptr->write_word(word);
 			cbit = 0;
+			word = 0;
 		}
 	}
 
@@ -351,14 +353,14 @@ private:
 
 	// io variables:
 	iostream* sptr; // Pointer to iostream for writing.
-	unsigned char bbyte = 0;
-	unsigned char cbit = 0;
+	uint32_t word = 0;
+	int cbit = 0;
 
 	// Arithmetic coding variables:
 	unsigned int clow = 0;
 	unsigned int chigh = CODER_LIMIT100 - 1;
 	unsigned int cstep = 0;
-	unsigned int nrbits = 0;
+	int nrbits = 0;
 };
 
 class ArithmeticDecoder {

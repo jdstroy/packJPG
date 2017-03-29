@@ -21,9 +21,18 @@ ArithmeticEncoder::~ArithmeticEncoder() {
 	} // done, zeroes are auto-read by the decoder
 
 	  // pad code with zeroes
-	while (cbit > 0) {
-		write_bit<0>();
+	const int pad_bit_count = 8 - (cbit % 8);
+	word <<= pad_bit_count;
+	cbit += pad_bit_count;
+	for (cbit; cbit >= 8; cbit -= 8) {
+		const uint8_t byte = (word >> (cbit - 8)) & 0xFF;
+		sptr->write_byte(byte);
 	}
+
+	/*while (cbit > 0) {
+
+		write_bit<0>();
+	}*/
 }
 
 void ArithmeticEncoder::encode(const Symbol* s)
@@ -41,7 +50,7 @@ void ArithmeticEncoder::encode(const Symbol* s)
 	// one bit can be safely shifted out
 	while (clow_local >= CODER_LIMIT050 || chigh_local < CODER_LIMIT050) {
 		if (chigh_local < CODER_LIMIT050) {	// this means both, high and low are below, and 0 can be safely shifted out
-											// write 0 bit
+			// write 0 bit
 			write_bit<0>();
 			// shift out remaing e3 bits
 			writeNrbitsAsOne();
@@ -76,49 +85,50 @@ void ArithmeticEncoder::encode(const Symbol* s)
 }
 
 void ArithmeticEncoder::writeNrbitsAsZero() {
-	if (nrbits + cbit >= 8) {
-		int remainingBits = 8 - cbit;
+	if (nrbits + cbit >= 32) {
+		int remainingBits = 32 - cbit;
 		nrbits -= remainingBits;
-		bbyte <<= remainingBits;
-		sptr->write_byte(bbyte);
+		word <<= remainingBits;
+		sptr->write_word(word);
 		cbit = 0;
 	}
 
-	constexpr uint8_t zero = 0;
-	while (nrbits >= 8) {
-		sptr->write_byte(zero);
-		nrbits -= 8;
+	constexpr uint32_t zero = 0;
+	while (nrbits >= 32) {
+		sptr->write_word(zero);
+		nrbits -= 32;
 	}
 	/*
-	No need to check if cbits is 8, since nrbits is strictly less than 8
+	No need to check if cbits is 32, since nrbits is strictly less than 32
 	and cbit is initially 0 here:
 	*/
-	bbyte <<= nrbits;
+	word <<= nrbits;
 	cbit += nrbits;
 	nrbits = 0;
 }
 
 void ArithmeticEncoder::writeNrbitsAsOne() {
-	if (nrbits + cbit >= 8) {
-		int remainingBits = 8 - cbit;
+	constexpr uint32_t all_ones = std::numeric_limits<uint32_t>::max();
+	if (nrbits + cbit >= 32) {
+		int remainingBits = 32 - cbit;
 		nrbits -= remainingBits;
-		bbyte <<= remainingBits;
-		bbyte |= std::numeric_limits<uint8_t>::max() >> (8 - remainingBits);
-		sptr->write_byte(bbyte);
+		word <<= remainingBits;
+		word |= all_ones >> (32 - remainingBits);
+		sptr->write_word(word);
 		cbit = 0;
 	}
 
-	constexpr uint8_t all_ones = std::numeric_limits<uint8_t>::max();
-	while (nrbits >= 8) {
-		sptr->write_byte(all_ones);
-		nrbits -= 8;
+	while (nrbits >= 32) {
+		sptr->write_word(all_ones);
+		nrbits -= 32;
 	}
 
 	/*
-	No need to check if cbits is 8, since nrbits is strictly less than 8
+	No need to check if cbits is 32, since nrbits is strictly less than 32
 	and cbit is initially 0 here:
 	*/
-	bbyte = (bbyte << nrbits) | (std::numeric_limits<uint8_t>::max() >> (8 - nrbits));
+	uint32_t mask = (nrbits == 0) ? 0 : all_ones >> uint32_t(32 - nrbits);	
+	word = (word << nrbits) | mask;
 	cbit += nrbits;
 	nrbits = 0;
 }

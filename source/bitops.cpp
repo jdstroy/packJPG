@@ -456,6 +456,14 @@ int MemStream::write_byte(unsigned char byte) {
 	return 1;
 }
 
+bool MemStream::write_word(uint32_t word) {
+	for (int i = 3; i >= 0; i--) {
+		uint8_t byte = (word >> (8*i)) & 0xFF;
+		mwrt->write(byte);
+	}
+	return true;
+}
+
 /* -----------------------------------------------
 	read function for memory
 	----------------------------------------------- */
@@ -536,6 +544,22 @@ int FileStream::write(const unsigned char* from, int dtsize) {
 
 int FileStream::write_byte(unsigned char byte) {
 	return fputc(byte, fptr) == byte;
+}
+
+bool FileStream::write_word(uint32_t word) {
+	/*for (int i = 0; i < 32; i += 8) {
+	//for (int i = 24; i >= 0; i -= 8) {
+		const uint8_t byte = (word >> i) & 0xFF;
+		fputc(byte, fptr);
+	}
+	return true;*/
+	//printf("\nval: %X", word);
+	uint32_t first = word >> 24 & 0xFF;
+	uint32_t second = (word >> 16 & 0xFF) << 8;
+	uint32_t third = (word >> 8 & 0xFF) << 16;
+	uint32_t fourth = (word & 0xFF) << 24;
+	uint32_t outword = first | second | third | fourth;
+	return fwrite(&outword, sizeof outword, 1, fptr) != 0;
 }
 
 int FileStream::rewind() {
