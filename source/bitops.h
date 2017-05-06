@@ -88,7 +88,7 @@ private:
 class abytereader
 {
 public:
-	abytereader( unsigned char* array, int size );
+	abytereader(const std::vector<std::uint8_t>& data);
 	~abytereader();	
 	int read( unsigned char* byte );
 	int read_n( unsigned char* byte, int n );
@@ -98,10 +98,9 @@ public:
 	bool eof();
 	
 private:
-	unsigned char* data;
-	int lbyte;
-	int cbyte;
-	bool _eof;
+	const std::vector<std::uint8_t> data_;
+	std::vector<std::uint8_t>::const_iterator cbyte_; // The position in the data of the byte being read.
+	bool eof_ = false;
 };
 
 

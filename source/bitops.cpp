@@ -8,6 +8,7 @@ reading and writing of arrays
 #include <algorithm>
 #include <array>
 #include <cstdio>
+#include <experimental/filesystem>
 #include <vector>
 
 #if defined(_WIN32) || defined(WIN32)
@@ -346,47 +347,32 @@ bool abitwriter::error()
 	return error_;
 }
 
-
 /* -----------------------------------------------
 	constructor for abytewriter class
 	----------------------------------------------- */
-
-abytereader::abytereader( unsigned char* array, int size )
-{
-	cbyte = 0;
-	_eof = false;
-	
-	data = array;
-	lbyte = size;
-	
-	if ( ( data == nullptr ) || ( lbyte == 0 ) )
-		_eof = true;
-}
+abytereader::abytereader(const std::vector<std::uint8_t>& bytes) :
+	data_(bytes),
+	cbyte_(std::begin(data_)),
+	eof_(bytes.empty()) {}
 
 /* -----------------------------------------------
 	destructor for abytewriter class
 	----------------------------------------------- */
 
-abytereader::~abytereader()
-{
-}
+abytereader::~abytereader() {}
 
 /* -----------------------------------------------
 	reads 1 byte from abytereader
 	----------------------------------------------- */
-
-int abytereader::read( unsigned char* byte )
-{
-	if ( cbyte >= lbyte ) {
-		cbyte = lbyte;
-		_eof = true;
-		return 0;
-	}
-	else {
-		*byte = data[ cbyte ];
-		cbyte++;
-		_eof = cbyte >= lbyte;
-		return 1;
+int abytereader::read( unsigned char* byte ) {
+	if (cbyte_ == std::end(data_)) {
+		eof_ = true;
+		return false;
+	} else {
+		*byte = *cbyte_;
+		++cbyte_;
+		eof_ = cbyte_ == std::end(data_);
+		return true;
 	}
 }
 
@@ -394,16 +380,16 @@ int abytereader::read( unsigned char* byte )
 	reads n bytes from abytereader
 	----------------------------------------------- */
 	
-int abytereader::read_n( unsigned char* byte, int n )
-{
-	if (n <= 0 || byte == nullptr) {
+int abytereader::read_n( unsigned char* to, int num_to_read ) {
+	if (num_to_read == 0 || to == nullptr) {
 		return 0;
 	}
-	int numAvailable = lbyte - cbyte;
-	int numRead = std::min(numAvailable, n);
-	std::copy(data + cbyte, data + cbyte + numRead, byte);
-	cbyte += numRead;
-	_eof = cbyte >= lbyte;
+	auto numAvailable = std::distance(cbyte_, std::end(data_));
+	auto numRead = std::min(int(numAvailable), num_to_read);
+	auto end = std::next(cbyte_, numRead);
+	std::copy(cbyte_, end, to);
+	cbyte_ = end;
+	eof_ = cbyte_ == std::end(data_);
 	return numRead;
 }
 
@@ -411,11 +397,10 @@ int abytereader::read_n( unsigned char* byte, int n )
 	go to position in data
 	----------------------------------------------- */
 	
-void abytereader::seek( int pos )
-{
-	int newPos = std::max(pos, 0);
-	cbyte = std::min(newPos, lbyte);
-	_eof = cbyte >= lbyte;
+void abytereader::seek( int pos ) {
+	std::size_t newPos = std::min(std::size_t(std::max(pos, 0)), data_.size());
+	cbyte_ = std::next(std::begin(data_), newPos);
+	eof_ = cbyte_ == std::end(data_);
 }
 
 /* -----------------------------------------------
@@ -424,7 +409,7 @@ void abytereader::seek( int pos )
 	
 int abytereader::getsize()
 {
-	return lbyte;
+	return data_.size();
 }
 
 /* -----------------------------------------------
@@ -433,12 +418,12 @@ int abytereader::getsize()
 
 int abytereader::getpos()
 {
-	return cbyte;
+	return std::distance(std::begin(data_), cbyte_);
 }
 
 bool abytereader::eof()
 {
-	return _eof;
+	return eof_;
 }
 
 abytewriter::abytewriter() {}
@@ -586,6 +571,7 @@ void iostream::switch_mode()
 	}
 	else {
 		// switching from writing to reading is a bit more complicated
+		std::vector<std::uint8_t> data;
 		switch ( srct ) {
 			case StreamType::kFile:
 				fflush( fptr );
@@ -597,7 +583,8 @@ void iostream::switch_mode()
 				source = mwrt->getptr();
 				srcs   = mwrt->getpos();
 				mwrt.reset();
-				mrdr = std::make_unique<abytereader>( ( unsigned char* ) source, srcs );
+				data = std::vector<std::uint8_t>((unsigned char*)source, (unsigned char*)source + srcs);
+				mrdr = std::make_unique<abytereader>(data);
 				free_mem_sw = true;
 				break;
 			default:
@@ -763,15 +750,22 @@ bool iostream::chkeof()
 	open function for files
 	----------------------------------------------- */
 
-void iostream::open_file()
-{
-	char* fn = (char*) source;
-	
+void iostream::open_file() {
+	char* fn = (char*) source;	
 	// open file for reading / writing
 	fptr = fopen( fn, ( mode == StreamMode::kRead ) ? "rb" : "wb" );
 	if (fptr != nullptr) {
 		file_buffer.reserve(32768);
 		std::setvbuf(fptr, file_buffer.data(), _IOFBF, file_buffer.capacity());
+	}
+
+	if (mode == StreamMode::kRead) {
+		auto file_size = std::experimental::filesystem::file_size(fn);
+		std::vector<std::uint8_t> data(file_size);
+		std::fread(data.data(), sizeof data[0], file_size, fptr);
+		std::fclose(fptr);
+		mrdr = std::make_unique<abytereader>(data);
+		srct = StreamType::kMemory;
 	}
 }
 
@@ -781,10 +775,12 @@ void iostream::open_file()
 
 void iostream::open_mem()
 {
-	if ( mode == StreamMode::kRead )
-		mrdr = std::make_unique<abytereader>( ( unsigned char* ) source, srcs );
-	else
+	if (mode == StreamMode::kRead) {
+		std::vector<std::uint8_t> data((unsigned char*)source, (unsigned char*)source + srcs);
+		mrdr = std::make_unique<abytereader>(data);
+	} else {
 		mwrt = std::make_unique<abytewriter>();
+	}
 }
 
 /* -----------------------------------------------
