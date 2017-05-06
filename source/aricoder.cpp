@@ -28,19 +28,20 @@ aricoder::~aricoder()
 		// due to clow < CODER_LIMIT050, and chigh >= CODER_LIMIT050
 		// there are only two possible cases
 		if ( clow < CODER_LIMIT025 ) { // case a.) 
-			write_bit<0>();
+			bitwriter_->write_bit<0>();
 			// write remaining bits
-			write_bit<1>();
-			writeNrbitsAsOne();
+			bitwriter_->write_bit<1>();
+			bitwriter_->write_n_one_bits(nrbits);
 		}
 		else { // case b.), clow >= CODER_LIMIT025
-			write_bit<1>();
+			bitwriter_->write_bit<1>();
 		} // done, zeroes are auto-read by the decoder
 		
 		// pad code with zeroes
-		while (cbit > 0) {
-			write_bit<0>();
-		}
+		bitwriter_->pad();
+
+		const auto& data = bitwriter_->get_data();
+		sptr->write(data.data(), data.size());
 	}
 }
 
@@ -64,17 +65,19 @@ void aricoder::encode( symbol* s )
 	while ( clow_local >= CODER_LIMIT050  || chigh_local < CODER_LIMIT050  ) {
 		if (chigh_local < CODER_LIMIT050 ) {	// this means both, high and low are below, and 0 can be safely shifted out
 			// write 0 bit
-			write_bit<0>();
+			bitwriter_->write_bit<0>();
 			// shift out remaing e3 bits
-			writeNrbitsAsOne();
+			bitwriter_->write_n_one_bits(nrbits);
+			nrbits = 0;
 		}
 		else { // if the first wasn't the case, it's clow >= CODER_LIMIT050
 			// write 1 bit
-			write_bit<1>();
+			bitwriter_->write_bit<1>();
 			clow_local &= CODER_LIMIT050 - 1;
 			chigh_local &= CODER_LIMIT050 - 1;
 			// shift out remaing e3 bits
-			writeNrbitsAsZero();
+			bitwriter_->write_n_zero_bits(nrbits);
+			nrbits = 0;
 		}
 		clow_local <<= 1;
 		chigh_local <<= 1;
@@ -96,55 +99,6 @@ void aricoder::encode( symbol* s )
 	clow = clow_local;
 	chigh = chigh_local;
 }
-
-void aricoder::writeNrbitsAsZero() {
-	if (nrbits + cbit >= 8) {
-		int remainingBits = 8 - cbit;
-		nrbits -= remainingBits;
-		bbyte <<= remainingBits;
-		sptr->write_byte(bbyte);
-		cbit = 0;
-	}
-
-	constexpr uint8_t zero = 0;
-	while (nrbits >= 8) {
-		sptr->write_byte(zero);
-		nrbits -= 8;
-	}
-	/*
-	No need to check if cbits is 8, since nrbits is strictly less than 8
-	and cbit is initially 0 here:
-	*/
-	bbyte <<= nrbits;
-	cbit += nrbits;
-	nrbits = 0;
-}
-
-void aricoder::writeNrbitsAsOne() {
-	if (nrbits + cbit >= 8) {
-		int remainingBits = 8 - cbit;
-		nrbits -= remainingBits;
-		bbyte <<= remainingBits;
-		bbyte |= std::numeric_limits<uint8_t>::max() >> (8 - remainingBits);
-		sptr->write_byte(bbyte);
-		cbit = 0;
-	}
-
-	constexpr uint8_t all_ones = std::numeric_limits<uint8_t>::max();
-	while (nrbits >= 8) {
-		sptr->write_byte(all_ones);
-		nrbits -= 8;
-	}
-
-	/*
-	No need to check if cbits is 8, since nrbits is strictly less than 8
-	and cbit is initially 0 here:
-	*/
-	bbyte = (bbyte << nrbits) | (std::numeric_limits<uint8_t>::max() >> (8 - nrbits));
-	cbit += nrbits;
-	nrbits = 0;
-}
-
 
 /* -----------------------------------------------
 	arithmetic decoder get count function

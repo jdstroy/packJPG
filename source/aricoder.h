@@ -292,22 +292,8 @@ public:
 
 private:
 
-	template<uint8_t bit>
-	void write_bit() {
-		// add bit at last position
-		bbyte = (bbyte << 1) | bit;
-		// increment bit position
-		cbit++;
+	std::unique_ptr<ArithmeticBitWriter> bitwriter_ = std::make_unique<ArithmeticBitWriter>();
 
-		// write bit if done
-		if (cbit == 8) {
-			sptr->write_byte(bbyte);
-			cbit = 0;
-		}
-	}
-
-	void writeNrbitsAsZero();
-	void writeNrbitsAsOne();
 	unsigned char read_bit();
 
 	// i/o variables

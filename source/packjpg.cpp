@@ -5478,27 +5478,18 @@ bool pjg::decode::generic( const std::unique_ptr<aricoder>& dec, unsigned char**
 }
 
 std::vector<std::uint8_t> pjg::decode::generic(const std::unique_ptr<aricoder>& dec) {
-	auto bwrt = std::make_unique<abytewriter>(1024);
+	std::vector<std::uint8_t> generic_data;
 	auto model = INIT_MODEL_S(256 + 1, 256, 1);
 	while (true) {
 		int c = dec->decode_ari(model);
 		if (c == 256) {
 			break;
 		}
-		bwrt->write((unsigned char)c);
+		generic_data.emplace_back(static_cast<std::uint8_t>(c));
 		model->shift_context(c);
 	}
 
-	// check for out of memory
-	if (bwrt->error()) {
-		sprintf(errormessage, MEM_ERRMSG.c_str());
-		errorlevel = 2;
-		return std::vector<std::uint8_t>();
-	}
-
-	auto data = bwrt->getptr();
-	auto length = bwrt->getpos();
-	return std::vector<std::uint8_t>(data, data + length);
+	return generic_data;
 
 }
 
