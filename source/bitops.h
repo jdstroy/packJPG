@@ -9,6 +9,7 @@
 #define BITN( c, n )		( (c >> n) & 0x1 )
 
 #include <memory>
+#include <limits>
 #include <vector>
 
 enum StreamType {
