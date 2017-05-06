@@ -112,22 +112,17 @@ private:
 class abytewriter
 {
 public:
-	abytewriter( int size );
+	abytewriter();
 	~abytewriter();	
 	void write( unsigned char byte );
 	void write_n(const unsigned char* byte, int n );
 	unsigned char* getptr();
-	unsigned char* peekptr();
 	int getpos();
 	void reset();
 	bool error();
 	
 private:
-	unsigned char* data;
-	int dsize;
-	int cbyte;
-	bool fmem;
-	bool _error;
+	std::vector<std::uint8_t> data_;
 };
 
 

@@ -501,12 +501,12 @@ int ac_prg_fs(const std::unique_ptr<abitwriter>& huffw, const HuffCodes& actbl, 
 // Progressive DC SA encoding routine.
 void dc_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::array<std::int16_t, 64>& block);
 // Progressive AC SA encoding routine.
-int ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw, const HuffCodes& actbl,
+int ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, std::vector<std::uint8_t>& storw, const HuffCodes& actbl,
               const std::array<std::int16_t, 64>& block, int* eobrun, int from, int to);
 // Run of EOB encoding routine.
 void eobrun(const std::unique_ptr<abitwriter>& huffw, const HuffCodes& actbl, int* eobrun);
 // Correction bits encoding routine.
-void crbits(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw);
+void crbits(const std::unique_ptr<abitwriter>& huffw, std::vector<std::uint8_t>& storw);
 }
 
 namespace decode {
@@ -2135,11 +2135,11 @@ bool jpg::decode::read()
 	jpg::scan_count = 0;
 	
 	// start headerwriter
-	auto hdrw = std::make_unique<abytewriter>(4096);
+	auto hdrw = std::make_unique<abytewriter>();
 	hdrs = 0; // size of header data, start with 0
 	
 	// start huffman writer
-	auto huffw = std::make_unique<abytewriter>(0);
+	auto huffw = std::make_unique<abytewriter>();
 	
 	// alloc memory for segment data first
 	std::vector<std::uint8_t> segment(1024);
@@ -2271,7 +2271,7 @@ bool jpg::decode::read()
 	bool garbage_avail = str_in->read_byte(&tmp);
 	if (garbage_avail) {
 
-		auto grbgw = std::make_unique<abytewriter>( 1024 );
+		auto grbgw = std::make_unique<abytewriter>();
 		grbgw->write( tmp );
 		while( true ) {
 			len = str_in->read( segment.data(), segment.capacity() );
@@ -2727,7 +2727,7 @@ bool jpg::encode::recode()
 	huffw->set_fillbit( jpg::padbit );
 	
 	// init storage writer
-	auto storw = std::make_unique<abytewriter>(0); // bytewise writer for storage of correction bits
+	std::vector<std::uint8_t> storw; // bytewise writer for storage of correction bits
 	
 	// preset count of scans and restarts
 	jpg::scan_count = 0;
@@ -3838,7 +3838,7 @@ bool jpg::rebuild_header()
 	
 	
 	// start headerwriter
-	auto hdrw = std::make_unique<abytewriter>( 4096 ); // new header writer
+	auto hdrw = std::make_unique<abytewriter>(); // new header writer
 	
 	// header parser loop
 	while ( ( int ) hpos < hdrs ) {
@@ -4150,7 +4150,7 @@ int jpg::decode::ac_prg_sa(const std::unique_ptr<abitreader>& huffr, const HuffT
 	return eob;
 }
 
-int jpg::encode::ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw, const HuffCodes& actbl, const std::array<std::int16_t, 64>& block, int* eobrun, int from, int to)
+int jpg::encode::ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, std::vector<std::uint8_t>& storw, const HuffCodes& actbl, const std::array<std::int16_t, 64>& block, int* eobrun, int from, int to)
 {
 	unsigned short n;
 	unsigned char  s;
@@ -4202,7 +4202,7 @@ int jpg::encode::ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::
 		}
 		else { // store correction bits
 			n = block[ bpos ] & 0x1;
-			storw->write( n );
+			storw.emplace_back(n);
 		}
 	}
 	
@@ -4211,7 +4211,7 @@ int jpg::encode::ac_prg_sa(const std::unique_ptr<abitwriter>& huffw, const std::
 	{
 		if ( block[ bpos ] != 0 ) { // store correction bits
 			n = block[ bpos ] & 0x1;
-			storw->write( n );
+			storw.emplace_back(n);
 		}
 	}
 	
@@ -4267,24 +4267,11 @@ void jpg::encode::eobrun(const std::unique_ptr<abitwriter>& huffw, const HuffCod
 	}
 }
 
-void jpg::encode::crbits(const std::unique_ptr<abitwriter>& huffw, const std::unique_ptr<abytewriter>& storw)
-{	
-	unsigned char* data;
-	int len;
-	int i;
-	
-	
-	// peek into data from abytewriter	
-	len = storw->getpos();
-	if ( len == 0 ) return;
-	data = storw->peekptr();
-	
-	// write bits to huffwriter
-	for ( i = 0; i < len; i++ )
-		huffw->write_bit(data[i]);
-	
-	// reset abytewriter, discard data
-	storw->reset();
+void jpg::encode::crbits(const std::unique_ptr<abitwriter>& huffw, std::vector<std::uint8_t>& storw) {	
+	for (std::uint8_t bit : storw) {
+		huffw->write_bit(bit);
+	}
+	storw.clear();
 }
 
 int jpg::decode::next_huffcode(const std::unique_ptr<abitreader>& huffr, const HuffTree& ctree)
@@ -5451,7 +5438,7 @@ void pjg::decode::ac_low(const std::unique_ptr<aricoder>& dec, int cmp)
 bool pjg::decode::generic( const std::unique_ptr<aricoder>& dec, unsigned char** data, int* len )
 {
 	// start byte writer
-	auto bwrt = std::make_unique<abytewriter>(1024);
+	auto bwrt = std::make_unique<abytewriter>();
 	
 	// decode header, ending with 256 symbol
 	auto model = INIT_MODEL_S(256 + 1, 256, 1);

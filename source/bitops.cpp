@@ -441,129 +441,46 @@ bool abytereader::eof()
 	return _eof;
 }
 
+abytewriter::abytewriter() {}
 
-/* -----------------------------------------------
-	constructor for abytewriter class
-	----------------------------------------------- */	
+abytewriter::~abytewriter() {}
 
-abytewriter::abytewriter( int size )
-{
-	cbyte = 0;
-	
-	_error = false;
-	fmem  = true;
-	
-	dsize = std::max(size, 65536);
-	data = (unsigned char*) malloc( dsize );
-	if ( data == nullptr ) {
-		_error = true;
-	}
+void abytewriter::write( unsigned char byte ) {
+	data_.emplace_back(byte);
 }
-
-/* -----------------------------------------------
-	destructor for abytewriter class
-	----------------------------------------------- */	
-
-abytewriter::~abytewriter()
-{
-	// free data if pointer is not read
-	if ( fmem )	free( data );
-}
-
-/* -----------------------------------------------
-	writes 1 byte to abytewriter
-	----------------------------------------------- */	
-
-void abytewriter::write( unsigned char byte )
-{
-	// safety check for error
-	if ( error()) return;
 	
-	// test if pointer beyond flush threshold
-	if ( cbyte >= dsize ) {
-		data = frealloc( data, dsize * 2 );
-		if ( data == nullptr ) {
-			_error = true;
-			return;
-		}
-		dsize *= 2;
-	}
-	
-	// write data
-	data[ cbyte ] = byte;
-	cbyte++;
-}
-
-/* -----------------------------------------------
-	writes n byte to abytewriter
-	----------------------------------------------- */
-	
-void abytewriter::write_n(const unsigned char* byte, int n )
-{
-	// safety check for error
-	if ( error() || n < 0 ) return;
-	
-	// make sure that pointer doesn't get beyond flush threshold
-	while ( cbyte + n >= dsize ) {
-		data = frealloc( data, dsize * 2);
-		if ( data == nullptr ) {
-			_error = true;
-			return;
-		}
-		dsize *= 2;
-	}
-	
-	std::copy(byte, byte + n, data + cbyte);
-	cbyte += n;
+void abytewriter::write_n(const unsigned char* byte, int n ) {
+	data_.insert(std::end(data_), byte, byte + n);
 }
 
 /* -----------------------------------------------
 	gets data array from abytewriter
 	----------------------------------------------- */
 
-unsigned char* abytewriter::getptr()
-{
-	// safety check for error
-	if ( error()) return nullptr;
-	// forbid freeing memory
-	fmem = false;
-	// realloc data
-	data = frealloc( data, cbyte );
-	
-	return data;
-}
-
-/* -----------------------------------------------
-	peeks into data array from abytewriter
-	----------------------------------------------- */
-	
-unsigned char* abytewriter::peekptr()
-{
-	return data;
+unsigned char* abytewriter::getptr() {
+	auto data_copy = new unsigned char[data_.size()];
+	std::copy(std::begin(data_), std::end(data_), data_copy);
+	return data_copy;
 }
 
 /* -----------------------------------------------
 	gets size of data array from abytewriter
 	----------------------------------------------- */	
 
-int abytewriter::getpos()
-{
-	return cbyte;
+int abytewriter::getpos() {
+	return data_.size();
 }
 
 /* -----------------------------------------------
 	reset without realloc
 	----------------------------------------------- */	
 	
-void abytewriter::reset()
-{
-	// set position of current byte
-	cbyte = 0;
+void abytewriter::reset() {
+	data_.resize(0);
 }
 
-bool abytewriter::error()
-{
-	return _error;
+bool abytewriter::error() {
+	return false;
 }
 
 
@@ -660,7 +577,7 @@ void iostream::switch_mode()
 				mrdr.reset();
 				if ( free_mem_sw )
 					free( source );
-				mwrt = std::make_unique<abytewriter>( srcs );
+				mwrt = std::make_unique<abytewriter>();
 				break;
 			default:
 				break;
@@ -867,7 +784,7 @@ void iostream::open_mem()
 	if ( mode == StreamMode::kRead )
 		mrdr = std::make_unique<abytereader>( ( unsigned char* ) source, srcs );
 	else
-		mwrt = std::make_unique<abytewriter>( srcs );
+		mwrt = std::make_unique<abytewriter>();
 }
 
 /* -----------------------------------------------
@@ -879,7 +796,7 @@ void iostream::open_stream()
 	
 	if ( mode == StreamMode::kRead ) {
 		// read whole stream into memory buffer
-		auto strwrt = std::make_unique<abytewriter>( 0 );
+		auto strwrt = std::make_unique<abytewriter>();
 		constexpr int buffer_capacity = 1024 * 1024;
     std::vector<unsigned char> buffer(buffer_capacity);
 
