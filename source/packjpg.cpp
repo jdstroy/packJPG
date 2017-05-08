@@ -2811,7 +2811,7 @@ bool jpg::encode::recode()
 						
 						// encode block
 						int eob = jpg::encode::block_seq( huffw,
-						                              jpg::hcodes[0][cmpnfo[cmp].huffac],
+						                              jpg::hcodes[0][cmpnfo[cmp].huffdc],
 						                              jpg::hcodes[1][cmpnfo[cmp].huffac],
 						                              block );
 						
@@ -2867,7 +2867,7 @@ bool jpg::encode::recode()
 						
 						// encode block
 						int eob = jpg::encode::block_seq( huffw,
-						                              jpg::hcodes[0][cmpnfo[cmp].huffac],
+						                              jpg::hcodes[0][cmpnfo[cmp].huffdc],
 						                              jpg::hcodes[1][cmpnfo[cmp].huffac],
 						                              block );
 						
